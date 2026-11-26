@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command App - BoDean Trucking</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #09090b;
+      color: #fafafa;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Custom Scrollbar for horizontal calendar grid */
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #18181b;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #52525b;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #ffffff;
+    }
+
+    /* Sticky column shadow for mobile */
+    .sticky-col-shadow {
+      box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Print styling for clean invoice printout */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-invoice-modal, #print-invoice-modal * {
+        visibility: visible;
+      }
+      #print-invoice-modal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between max-w-5xl mx-auto px-3 py-3 sm:px-5 sm:py-5">
+
+  <!-- TOAST NOTIFICATION BANNER -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- APP HEADER & MAIN TABS -->
+  <div>
+    <header class="flex items-center justify-between pb-3 border-b border-zinc-800">
+      <div class="flex items-center space-x-3">
+        <!-- Option 4: Command Chevron & Boom Vector (Two stacked sharp white chevrons angled upward-right) -->
+        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-black border-2 border-white flex items-center justify-center shrink-0 shadow-md" aria-hidden="true">
+          <svg viewBox="0 0 36 36" class="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="currentColor">
+            <!-- Upper / Lead Command Chevron -->
+            <polygon points="14,8 28,8 28,22 24.5,18.5 22.5,13.5 17.5,11.5" />
+            <!-- Lower / Secondary Stacked Command Chevron -->
+            <polygon points="7,15 21,15 21,29 17.5,25.5 15.5,20.5 10.5,18.5" />
+            <!-- Boom Pivot Anchor -->
+            <circle cx="9.5" cy="26.5" r="2.2" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-lg sm:text-xl text-white leading-none tracking-tight">Command App</h1>
+          <p class="text-xs text-zinc-400 mt-1">BoDean Trucking • Mobile Crane Dispatch</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-zinc-900 text-white border border-zinc-700 hidden sm:inline-block">$495 Flat Rate</span>
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-200 border border-zinc-700">BC GST (5%)</span>
+      </div>
+    </header>
+
+    <!-- MAIN NAVIGATION TABS -->
+    <nav class="flex bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 my-4 space-x-1 shadow-lg">
+      <button id="nav-board" onclick="switchTab('board')" 
+        class="flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition text-black bg-white shadow">
+        <i class="fa-solid fa-calendar-days mr-1.5"></i>Dispatch Board
+      </button>
+      <button id="nav-driver" onclick="switchTab('driver')" 
+        class="flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition text-zinc-400 hover:text-white">
+        <i class="fa-solid fa-hard-hat mr-1.5"></i>Driver View
+      </button>
+      <button id="nav-invoices" onclick="switchTab('invoices')" 
+        class="flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition text-zinc-400 hover:text-white">
+        <i class="fa-solid fa-file-invoice-dollar mr-1.5"></i>Invoices & Sage
+      </button>
+    </nav>
+
+    <!-- ================================================================= -->
+    <!-- TAB 1: DISPATCH BOARD (INTAKE FORM + OPERATOR SCHEDULE VIEW)      -->
+    <!-- ================================================================= -->
+    <section id="tab-content-board" class="space-y-5">
+      
+      <!-- FAST INTAKE FORM FOR DEAN -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-phone-volume"></i> Quick Phone Intake & Dispatch
+          </h2>
+          <span class="text-[11px] font-mono font-bold text-zinc-300 bg-black px-2 py-0.5 rounded border border-zinc-800">
+            Standard Fee: $495.00 CAD
+          </span>
+        </div>
+
+        <form id="intake-form" onsubmit="handleAddJob(event)" class="space-y-3">
+          <!-- Row 1: Company / Customer Name (Required) & PO # (Optional) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-zinc-400 mb-1">Company / Customer Name *</label>
+              <select id="form-company" required
+                class="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-white font-medium">
+                <option value="" disabled selected>-- Select Company / Customer --</option>
+                <option value="Roofmart Surrey">Roofmart Surrey</option>
+                <option value="Roofmart Chilliwack">Roofmart Chilliwack</option>
+                <option value="Roofmart Abbotsford">Roofmart Abbotsford</option>
+                <option value="Convoy Supply Surrey">Convoy Supply Surrey</option>
+                <option value="Convoy Supply Coquitlam">Convoy Supply Coquitlam</option>
+                <option value="Convoy Supply Abbotsford">Convoy Supply Abbotsford</option>
+                <option value="ABC Supply Surrey">ABC Supply Surrey</option>
+                <option value="ABC Supply Burnaby">ABC Supply Burnaby</option>
+                <option value="ABC Supply Abbotsford">ABC Supply Abbotsford</option>
+                <option value="QXO Surrey">QXO Surrey</option>
+                <option value="Glenform">Glenform</option>
+                <option value="Magnum Industries">Magnum Industries</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-zinc-400 mb-1">PO #</label>
+              <input type="text" id="form-po" placeholder="e.g. PO-9821"
+                class="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-white font-medium">
+            </div>
+          </div>
+
+          <!-- Row 2: City Dropdown (Left, Alphabetical) & Site Address (Right) - Both Optional -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-zinc-400 mb-1">City</label>
+              <select id="form-city"
+                class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-white font-medium">
+                <option value="" selected>-- Select City --</option>
+                <option value="Abbotsford">Abbotsford</option>
+                <option value="Burnaby">Burnaby</option>
+                <option value="Chilliwack">Chilliwack</option>
+                <option value="Coquitlam">Coquitlam</option>
+                <option value="Delta">Delta</option>
+                <option value="Langley">Langley</option>
+                <option value="Maple Ridge">Maple Ridge</option>
+                <option value="Mission">Mission</option>
+                <option value="New Westminster">New Westminster</option>
+                <option value="North Vancouver">North Vancouver</option>
+                <option value="Pitt Meadows">Pitt Meadows</option>
+                <option value="Richmond">Richmond</option>
+                <option value="Surrey">Surrey</option>
+                <option value="Vancouver">Vancouver</option>
+                <option value="Walnut Grove">Walnut Grove</option>
+                <option value="West Vancouver">West Vancouver</option>
+                <option value="White Rock">White Rock</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-zinc-400 mb-1">Site Address</label>
+              <input type="text" id="form-address" placeholder="e.g. 8890 Hudson St"
+                class="w-full bg-black border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-white font-medium">
+            </div>
+          </div>
+
+          <!-- Row 3: Date (Popover Calendar without Year), Time Slot, Assign Driver - All Optional -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div id="date-picker-wrapper" class="relative">
+              <label class="block text-xs font-semibold text-zinc-400 mb-1">Date</label>
+              <input type="hidden" id="form-date">
+              <button type="button" id="form-date-trigger" onclick="toggleIntakeCalendar(event)"
+                class="w-full bg-black border border-zinc-800 hover:border-zinc-700 focus:border-white rounded-xl px-3.5 py-2.5 text-sm text-left flex items-center justify-between focus:outline-none font-medium transition">
+                <span id="form-date-display" class="text-white">Today</span>
+                <i class="fa-regular fa-calendar text-white text-xs"></i>
+              </button>
+
+              <!-- COMPACT CALENDAR POPOVER (NO YEAR, AUTO-SELECTS TODAY) -->
+              <div id="intake-calendar-popover" onclick="event.stopPropagation()"
+                class="hidden absolute left-0 top-full mt-1.5 z-40 w-64 bg-zinc-900 border border-zinc-700 rounded-2xl p-3 shadow-2xl space-y-2.5">
+                
+                <!-- Month Header (No Year) -->
+                <div class="flex items-center justify-between">
+                  <button type="button" onclick="changeCalendarMonth(-1, event)"
+                    class="w-7 h-7 rounded-lg bg-black hover:bg-zinc-800 border border-zinc-800 text-zinc-300 flex items-center justify-center text-xs transition">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                  </button>
+                  <span id="cal-month-label" class="text-xs font-extrabold text-white tracking-wide uppercase">November</span>
+                  <button type="button" onclick="changeCalendarMonth(1, event)"
+                    class="w-7 h-7 rounded-lg bg-black hover:bg-zinc-800 border border-zinc-800 text-zinc-300 flex items-center justify-center text-xs transition">
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                  </button>
+                </div>
+
+                <!-- Weekday Labels -->
+                <div class="grid grid-cols-7 text-center text-[10px] font-bold text-zinc-500">
+                  <span>Su</span>
+                  <span>Mo</span>
+                  <span>Tu</span>
+                  <span>We</span>
+                  <span>Th</span>
+                  <span>Fr</span>
+                  <span>Sa</span>
+                </div>
+
+                <!-- Day Cells -->
+                <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                  <!-- Rendered via JS -->
+                </div>
+
+                <!-- Quick Today / Clear Footer -->
+                <div class="pt-2 border-t border-zinc-800 flex items-center justify-between text-[11px]">
+                  <button type="button" onclick="selectCalendarDay(formatDateISO(new Date()), event)"
+                    class="text-white hover:text-zinc-300 font-bold transition">
+                    Today
+                  </button>
+                  <button type="button" onclick="clearIntakeDate(event)"
+                    class="text-zinc-400 hover:text-white font-semibold transition">
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-zinc-400 mb-1">Time Slot</label>
+              <select id="form-timeslot" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-white">
+                <option value="" selected>-- Optional / Unscheduled --</option>
+                <option value="07:00">7:00 AM</option>
+                <option value="07:30">7:30 AM</option>
+                <option value="08:00">8:00 AM</option>
+                <option value="08:30">8:30 AM</option>
+                <option value="09:00">9:00 AM</option>
+                <option value="10:00">10:00 AM</option>
+                <option value="11:00">11:00 AM</option>
+                <option value="12:00">12:00 PM</option>
+                <option value="13:00">1:00 PM</option>
+                <option value="14:00">2:00 PM</option>
+                <option value="15:00">3:00 PM</option>
+                <option value="16:00">4:00 PM</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-zinc-400 mb-1">Assign Driver</label>
+              <select id="form-driver" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-white">
+                <option value="">-- Unassigned (Open Board) --</option>
+                <option value="Brett">Brett</option>
+                <option value="CJ">CJ</option>
+                <option value="Ryan">Ryan</option>
+                <option value="Leroy">Leroy</option>
+                <option value="Nick">Nick</option>
+                <option value="Dean">Dean</option>
+                <option value="Overflow">Overflow</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-extrabold py-3 rounded-xl text-sm transition active:scale-[0.99] mt-1 shadow-lg shadow-white/5 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-calendar-plus text-base"></i>
+            <span>Add Job to Schedule ($495)</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- SCHEDULE CONTROLS & VIEWS TOGGLE -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5 space-y-3">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+          
+          <!-- DAY NAVIGATION -->
+          <div class="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-start">
+            <button onclick="changeScheduleDay(-1)" class="bg-black hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-300 transition flex items-center gap-1">
+              <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
+            </button>
+            <button onclick="resetToToday()" class="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition">
+              Today
+            </button>
+            <button onclick="changeScheduleDay(1)" class="bg-black hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-300 transition flex items-center gap-1">
+              Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+          </div>
+
+          <!-- CURRENT SCHEDULE DAY TITLE -->
+          <div class="text-center sm:text-left">
+            <div id="schedule-day-label" class="text-xs sm:text-sm font-extrabold text-white">Loading Schedule...</div>
+            <p class="text-[10px] text-zinc-400">Operator & Overflow Dispatch Grid</p>
+          </div>
+
+          <!-- VIEW MODE TOGGLE -->
+          <div class="flex bg-black p-1 rounded-xl border border-zinc-800 w-full sm:w-auto">
+            <button id="btn-view-grid" onclick="setBoardViewMode('grid')" class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition text-black bg-white">
+              <i class="fa-solid fa-table-cells mr-1"></i>Schedule Grid
+            </button>
+            <button id="btn-view-list" onclick="setBoardViewMode('list')" class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition text-zinc-400 hover:text-white">
+              <i class="fa-solid fa-list-ul mr-1"></i>List View
+            </button>
+          </div>
+
+        </div>
+
+        <!-- OPERATOR LEGEND (MONOCHROME) -->
+        <div class="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between text-[11px] text-zinc-400 gap-2">
+          <span class="font-bold text-zinc-300">Dispatch Columns:</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="flex items-center gap-1.5 bg-black px-2 py-0.5 rounded border border-zinc-800 text-zinc-200"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>Brett</span>
+            <span class="flex items-center gap-1.5 bg-black px-2 py-0.5 rounded border border-zinc-800 text-zinc-200"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>CJ</span>
+            <span class="flex items-center gap-1.5 bg-black px-2 py-0.5 rounded border border-zinc-800 text-zinc-200"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>Ryan</span>
+            <span class="flex items-center gap-1.5 bg-black px-2 py-0.5 rounded border border-zinc-800 text-zinc-200"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>Leroy</span>
+            <span class="flex items-center gap-1.5 bg-black px-2 py-0.5 rounded border border-zinc-800 text-zinc-200"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>Nick</span>
+            <span class="flex items-center gap-1.5 bg-black px-2 py-0.5 rounded border border-zinc-800 text-zinc-200"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>Dean</span>
+            <span class="flex items-center gap-1.5 bg-black px-2 py-0.5 rounded border border-zinc-800 text-zinc-200"><span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span>Overflow</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- UNSCHEDULED / TBD JOBS BAR (ONLY SHOWN WHEN UNSCHEDULED JOBS EXIST) -->
+      <div id="unscheduled-jobs-bar" class="hidden bg-zinc-900 border border-zinc-700 rounded-2xl p-3.5 space-y-2.5 shadow-lg">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-regular fa-clock"></i> Unscheduled / Time TBD Calls (<span id="unscheduled-count">0</span>)
+          </span>
+          <span class="text-[11px] text-zinc-400">Tap a card to assign date & time</span>
+        </div>
+        <div id="unscheduled-jobs-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- OPERATOR SCHEDULE GRID VIEW CONTAINER -->
+      <div id="container-grid-view" class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left border-collapse min-w-[820px]">
+            <thead>
+              <tr id="grid-header-row" class="bg-black text-xs font-bold text-zinc-400 border-b border-zinc-800">
+                <!-- Dynamically Rendered Operator Columns -->
+              </tr>
+            </thead>
+            <tbody id="grid-body-rows" class="divide-y divide-zinc-800/70 text-xs">
+              <!-- Dynamically Rendered Time Slot Rows -->
+            </tbody>
+          </table>
+        </div>
+        <div class="p-2.5 bg-black/80 border-t border-zinc-800 text-[11px] text-zinc-400 text-center">
+          <i class="fa-solid fa-hand-pointer text-white mr-1"></i> Tap any empty time slot to pre-fill date, time & operator for Dean's intake form. Tapping a job opens quick management.
+        </div>
+      </div>
+
+      <!-- LIST VIEW CONTAINER (ALTERNATIVE) -->
+      <div id="container-list-view" class="hidden space-y-3">
+        <div class="flex items-center justify-between text-xs text-zinc-400 px-1">
+          <span class="font-bold text-white uppercase tracking-wider text-[11px]">All Board Jobs</span>
+          <span id="board-count-badge" class="font-mono bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 text-zinc-200">0 Jobs</span>
+        </div>
+        <div id="board-jobs-list" class="space-y-3">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 2: DRIVER (CAB MOBILE VIEW)                                   -->
+    <!-- ================================================================= -->
+    <section id="tab-content-driver" class="hidden space-y-4">
+      
+      <!-- SIMPLE DRIVER SELECTOR -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+        <div>
+          <div class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-hard-hat"></i> Driver Mobile Cab View
+          </div>
+          <p class="text-xs text-zinc-400 mt-0.5">Select operator profile to manage dispatches</p>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <label class="text-xs font-bold text-zinc-300">Operator:</label>
+          <select id="select-driver-view" onchange="switchActiveDriver(this.value)" 
+            class="flex-1 sm:flex-none bg-white text-black font-extrabold px-3 py-2 rounded-xl text-sm focus:outline-none cursor-pointer shadow">
+            <option value="Brett">Brett</option>
+            <option value="CJ">CJ</option>
+            <option value="Ryan">Ryan</option>
+            <option value="Leroy">Leroy</option>
+            <option value="Nick">Nick</option>
+            <option value="Dean">Dean</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- DRIVER FILTER SUB-TABS -->
+      <div class="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800 space-x-1">
+        <button id="btn-driver-assigned" onclick="setDriverSubTab('assigned')" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-black bg-white">
+          My Assigned Jobs (<span id="count-driver-assigned">0</span>)
+        </button>
+        <button id="btn-driver-open" onclick="setDriverSubTab('open')" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-zinc-400 hover:text-white">
+          Open / Overflow (<span id="count-driver-open">0</span>)
+        </button>
+      </div>
+
+      <!-- DRIVER JOB CARDS FEED -->
+      <div id="driver-jobs-feed" class="space-y-4">
+        <!-- Rendered via JS -->
+      </div>
+
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 3: INVOICES (BILLING & SAGE EXPORT)                           -->
+    <!-- ================================================================= -->
+    <section id="tab-content-invoices" class="hidden space-y-4">
+      
+      <!-- SAGE EXPORT HEADER STATS -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4 shadow-xl">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <i class="fa-solid fa-file-invoice text-white"></i>
+              <span>Sage Completed Invoices</span>
+            </h2>
+            <p class="text-xs text-zinc-400">Auto-generated $495.00 Flat Rate + $24.75 GST (5%)</p>
+          </div>
+
+          <button onclick="exportSageCSV()" class="w-full sm:w-auto bg-white hover:bg-zinc-200 text-black font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition">
+            <i class="fa-solid fa-file-csv text-base"></i>
+            <span>Export Sage CSV</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 pt-3 border-t border-zinc-800 text-center">
+          <div class="bg-black p-2.5 rounded-xl border border-zinc-800">
+            <div class="text-[10px] text-zinc-400 font-bold uppercase">Completed</div>
+            <div id="stat-completed-count" class="text-base font-black text-white font-mono">0</div>
+          </div>
+          <div class="bg-black p-2.5 rounded-xl border border-zinc-800">
+            <div class="text-[10px] text-zinc-400 font-bold uppercase">Subtotal ($495)</div>
+            <div id="stat-subtotal-rev" class="text-base font-black text-zinc-200 font-mono">$0.00</div>
+          </div>
+          <div class="bg-black p-2.5 rounded-xl border border-zinc-800">
+            <div class="text-[10px] text-zinc-400 font-bold uppercase">Billed w/ GST</div>
+            <div id="stat-total-billed" class="text-base font-black text-white font-mono">$0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVOICE LIST CARDS -->
+      <div id="invoices-list" class="space-y-3">
+        <!-- Rendered via JS -->
+      </div>
+
+    </section>
+  </div>
+
+  <!-- SUBTLE FOOTER & RESET LINK -->
+  <footer class="mt-8 pt-4 border-t border-zinc-800 text-center text-xs text-zinc-500 flex items-center justify-between">
+    <span>Command App v0.1 • BoDean Trucking</span>
+    <button onclick="resetDemoData()" class="text-zinc-400 hover:text-white underline transition">
+      Clear All Jobs
+    </button>
+  </footer>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: EDIT / MANAGE JOB (DEAN'S DISPATCH MODAL)                  -->
+  <!-- ================================================================= -->
+  <div id="modal-job-manage" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden p-4 flex items-center justify-center">
+    <div class="bg-zinc-900 border border-zinc-700 text-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span id="modal-job-id" class="font-mono text-xs font-bold text-white bg-black px-2 py-0.5 rounded border border-zinc-700">BD-1001</span>
+          <h3 class="font-bold text-sm text-white">Manage Crane Job</h3>
+        </div>
+        <button onclick="closeManageModal()" class="text-zinc-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleSaveJobEdit(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="edit-job-id">
+        
+        <div>
+          <label class="block text-zinc-400 mb-1 font-semibold">Customer / Company *</label>
+          <select id="edit-company" required class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-white">
+            <option value="Roofmart Surrey">Roofmart Surrey</option>
+            <option value="Roofmart Chilliwack">Roofmart Chilliwack</option>
+            <option value="Roofmart Abbotsford">Roofmart Abbotsford</option>
+            <option value="Convoy Supply Surrey">Convoy Supply Surrey</option>
+            <option value="Convoy Supply Coquitlam">Convoy Supply Coquitlam</option>
+            <option value="Convoy Supply Abbotsford">Convoy Supply Abbotsford</option>
+            <option value="ABC Supply Surrey">ABC Supply Surrey</option>
+            <option value="ABC Supply Burnaby">ABC Supply Burnaby</option>
+            <option value="ABC Supply Abbotsford">ABC Supply Abbotsford</option>
+            <option value="QXO Surrey">QXO Surrey</option>
+            <option value="Glenform">Glenform</option>
+            <option value="Magnum Industries">Magnum Industries</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-zinc-400 mb-1 font-semibold">PO #</label>
+            <input type="text" id="edit-po" placeholder="e.g. PO-9821" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-white">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1 font-semibold">Driver / Column</label>
+            <select id="edit-driver" class="w-full bg-black border border-zinc-800 rounded-xl px-2.5 py-2 text-white font-bold focus:outline-none focus:border-white">
+              <option value="">-- Unassigned --</option>
+              <option value="Brett">Brett</option>
+              <option value="CJ">CJ</option>
+              <option value="Ryan">Ryan</option>
+              <option value="Leroy">Leroy</option>
+              <option value="Nick">Nick</option>
+              <option value="Dean">Dean</option>
+              <option value="Overflow">Overflow</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <label class="block text-zinc-400 mb-1 font-semibold">City</label>
+            <select id="edit-city" class="w-full bg-black border border-zinc-800 rounded-xl px-2.5 py-2 text-white font-medium focus:outline-none focus:border-white">
+              <option value="">-- Select City --</option>
+              <option value="Abbotsford">Abbotsford</option>
+              <option value="Burnaby">Burnaby</option>
+              <option value="Chilliwack">Chilliwack</option>
+              <option value="Coquitlam">Coquitlam</option>
+              <option value="Delta">Delta</option>
+              <option value="Langley">Langley</option>
+              <option value="Maple Ridge">Maple Ridge</option>
+              <option value="Mission">Mission</option>
+              <option value="New Westminster">New Westminster</option>
+              <option value="North Vancouver">North Vancouver</option>
+              <option value="Pitt Meadows">Pitt Meadows</option>
+              <option value="Richmond">Richmond</option>
+              <option value="Surrey">Surrey</option>
+              <option value="Vancouver">Vancouver</option>
+              <option value="Walnut Grove">Walnut Grove</option>
+              <option value="West Vancouver">West Vancouver</option>
+              <option value="White Rock">White Rock</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-zinc-400 mb-1 font-semibold">Site Address</label>
+            <input type="text" id="edit-address" placeholder="e.g. 8890 Hudson St" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-zinc-400 mb-1 font-semibold">Date</label>
+            <input type="date" id="edit-date" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-white">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1 font-semibold">Time Slot</label>
+            <select id="edit-timeslot" class="w-full bg-black border border-zinc-800 rounded-xl px-2.5 py-2 text-white font-bold focus:outline-none focus:border-white">
+              <option value="">-- Unscheduled --</option>
+              <option value="07:00">7:00 AM</option>
+              <option value="07:30">7:30 AM</option>
+              <option value="08:00">8:00 AM</option>
+              <option value="08:30">8:30 AM</option>
+              <option value="09:00">9:00 AM</option>
+              <option value="10:00">10:00 AM</option>
+              <option value="11:00">11:00 AM</option>
+              <option value="12:00">12:00 PM</option>
+              <option value="13:00">1:00 PM</option>
+              <option value="14:00">2:00 PM</option>
+              <option value="15:00">3:00 PM</option>
+              <option value="16:00">4:00 PM</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-zinc-400 mb-1 font-semibold">Job Status</label>
+          <select id="edit-status" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-white">
+            <option value="Open">Open (Pending Driver)</option>
+            <option value="Accepted">Accepted (Locked In)</option>
+            <option value="Done">Done (Completed & Invoiced)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between gap-2 border-t border-zinc-800">
+          <button type="button" id="btn-delete-job" onclick="handleDeleteJob()" class="bg-zinc-950 hover:bg-zinc-800 text-zinc-300 font-bold px-3 py-2.5 rounded-xl text-xs transition border border-zinc-700">
+            Delete
+          </button>
+          <div class="flex gap-2">
+            <button type="button" onclick="closeManageModal()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold px-3.5 py-2.5 rounded-xl text-xs">
+              Cancel
+            </button>
+            <button type="submit" class="bg-white hover:bg-zinc-200 text-black font-extrabold px-4 py-2.5 rounded-xl text-xs transition">
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: PRINTABLE INVOICE PREVIEW                                  -->
+  <!-- ================================================================= -->
+  <div id="modal-invoice-view" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden p-4 flex items-center justify-center overflow-y-auto">
+    <div class="bg-white text-zinc-950 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5" id="print-invoice-modal">
+      
+      <div class="no-print flex items-center justify-between border-b pb-3 border-zinc-200">
+        <span class="text-xs font-bold text-zinc-900 uppercase">BoDean Trucking Invoice</span>
+        <div class="flex gap-2">
+          <button onclick="window.print()" class="bg-black text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+            <i class="fa-solid fa-print"></i> Print / PDF
+          </button>
+          <button onclick="closeInvoiceModal()" class="bg-zinc-200 text-zinc-900 font-bold text-xs px-2.5 py-1.5 rounded-lg">
+            Close
+          </button>
+        </div>
+      </div>
+
+      <!-- INVOICE BODY -->
+      <div class="flex justify-between items-start border-b border-zinc-200 pb-4">
+        <div>
+          <h2 class="text-xl font-black tracking-tight text-zinc-950">BODEAN TRUCKING</h2>
+          <p class="text-xs text-zinc-600">Mobile Crane Service • Langley, BC</p>
+          <p class="text-xs text-zinc-500">GST #: 892019482 RT001</p>
+        </div>
+        <div class="text-right">
+          <div class="text-lg font-bold text-zinc-950 font-mono" id="inv-num">BD-INV-1001</div>
+          <div class="text-xs text-zinc-500" id="inv-date">2026-11-25</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 text-xs">
+        <div class="bg-zinc-100 p-2.5 rounded-lg border border-zinc-200">
+          <p class="text-[10px] text-zinc-500 font-bold uppercase">Customer:</p>
+          <p class="font-bold text-zinc-950 text-sm" id="inv-customer">--</p>
+          <p class="text-zinc-800 font-mono font-semibold" id="inv-po">--</p>
+        </div>
+        <div class="bg-zinc-100 p-2.5 rounded-lg border border-zinc-200">
+          <p class="text-[10px] text-zinc-500 font-bold uppercase">Site & Operator:</p>
+          <p class="text-zinc-800 truncate" id="inv-address">--</p>
+          <p class="text-zinc-600 mt-0.5">Driver: <strong id="inv-driver">--</strong></p>
+        </div>
+      </div>
+
+      <table class="w-full text-xs text-left border-collapse">
+        <thead>
+          <tr class="border-b border-zinc-200 text-zinc-500 font-bold">
+            <th class="py-2">Service Description</th>
+            <th class="py-2 text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="py-3">
+              <div class="font-bold text-zinc-900">Mobile Crane Dispatch Charge</div>
+              <div class="text-[11px] text-zinc-500" id="inv-timeslot-desc">Scheduled Time Slot: 9:00 AM</div>
+            </td>
+            <td class="py-3 text-right font-mono font-bold">$495.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="border-t border-zinc-200 pt-3 text-xs space-y-1.5 text-right">
+        <div class="flex justify-between text-zinc-600">
+          <span>Subtotal:</span>
+          <span class="font-mono">$495.00</span>
+        </div>
+        <div class="flex justify-between text-zinc-600">
+          <span>BC GST (5%):</span>
+          <span class="font-mono">$24.75</span>
+        </div>
+        <div class="flex justify-between text-sm font-extrabold text-zinc-950 border-t border-zinc-300 pt-2">
+          <span>Total CAD:</span>
+          <span class="font-mono text-zinc-950">$519.75</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC -->
+  <script>
+    const FLAT_RATE = 495.00;
+    const GST_RATE = 0.05;
+    const SCHEDULE_COLUMNS = ['Brett', 'CJ', 'Ryan', 'Leroy', 'Nick', 'Dean', 'Overflow'];
+    const OPERATORS = ['Brett', 'CJ', 'Ryan', 'Leroy', 'Nick', 'Dean'];
+    const TIME_SLOTS = [
+      { id: '07:00', label: '7:00 AM' },
+      { id: '07:30', label: '7:30 AM' },
+      { id: '08:00', label: '8:00 AM' },
+      { id: '08:30', label: '8:30 AM' },
+      { id: '09:00', label: '9:00 AM' },
+      { id: '10:00', label: '10:00 AM' },
+      { id: '11:00', label: '11:00 AM' },
+      { id: '12:00', label: '12:00 PM' },
+      { id: '13:00', label: '1:00 PM' },
+      { id: '14:00', label: '2:00 PM' },
+      { id: '15:00', label: '3:00 PM' },
+      { id: '16:00', label: '4:00 PM' }
+    ];
+
+    // Unified Black & White Card Styling for all columns & job cards
+    const CARD_STYLE = {
+      bg: 'bg-zinc-800/95',
+      text: 'text-white',
+      border: 'border-white/40',
+      badge: 'bg-white'
+    };
+
+    // Format Date as YYYY-MM-DD in local time
+    function formatDateISO(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Parse YYYY-MM-DD safely into local Date
+    function parseDateISO(isoStr) {
+      if (!isoStr) return null;
+      const parts = isoStr.split('-').map(Number);
+      if (parts.length !== 3) return null;
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    // Format date without year (e.g., "Wed, Nov 25")
+    function formatShortDateNoYear(isoStr) {
+      const d = parseDateISO(isoStr);
+      if (!d) return '';
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    // Combine Site Address and City cleanly
+    function formatJobAddress(job) {
+      const addr = (job.address || '').trim();
+      const city = (job.city || '').trim();
+      if (addr && city) return `${addr}, ${city}`;
+      if (addr) return addr;
+      if (city) return city;
+      return '';
+    }
+
+    // Zero pre-loaded jobs for clean demo starts
+    function getInitialSeedJobs() {
+      return [];
+    }
+
+    // STATE
+    let jobs = [];
+    let currentTab = 'board';
+    let boardViewMode = 'grid';
+    let activeDriver = 'Brett';
+    let driverSubTab = 'assigned';
+    let selectedScheduleDate = new Date();
+    let calViewYear = new Date().getFullYear();
+    let calViewMonth = new Date().getMonth();
+    let deleteConfirmPending = false;
+
+    window.onload = function() {
+      selectedScheduleDate = new Date();
+      initIntakeDatePicker();
+
+      // Close calendar popover when clicking anywhere outside
+      document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('date-picker-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+          closeIntakeCalendar();
+        }
+      });
+
+      loadState();
+      renderApp();
+    };
+
+    function loadState() {
+      const saved = localStorage.getItem('bodean_dispatch_v3_5_bw');
+      if (saved) {
+        try {
+          jobs = JSON.parse(saved);
+        } catch (e) {
+          jobs = getInitialSeedJobs();
+        }
+      } else {
+        jobs = getInitialSeedJobs();
+        saveState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem('bodean_dispatch_v3_5_bw', JSON.stringify(jobs));
+    }
+
+    function resetDemoData() {
+      jobs = [];
+      saveState();
+      renderApp();
+      showToast('All jobs cleared.');
+    }
+
+    // NON-BLOCKING TOAST NOTIFICATION
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const accent = type === 'error'
+        ? 'border-zinc-500 text-zinc-200 bg-zinc-900'
+        : 'border-white/50 text-white bg-zinc-900';
+      toast.className = `${accent} border px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 transition-all duration-300`;
+      toast.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation text-zinc-400' : 'fa-circle-check text-white'}"></i><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(6px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 2400);
+    }
+
+    // =================================================================
+    // INTAKE POPOVER CALENDAR (NO YEAR, AUTO-SELECTS TODAY)
+    // =================================================================
+    function initIntakeDatePicker() {
+      const today = new Date();
+      calViewYear = today.getFullYear();
+      calViewMonth = today.getMonth();
+      const todayISO = formatDateISO(today);
+      document.getElementById('form-date').value = todayISO;
+      updateIntakeDateDisplay();
+      renderIntakeCalendar();
+    }
+
+    function updateIntakeDateDisplay() {
+      const isoVal = document.getElementById('form-date').value;
+      const displayEl = document.getElementById('form-date-display');
+      if (!isoVal) {
+        displayEl.innerText = '-- Optional / TBD --';
+        displayEl.className = 'text-zinc-500';
+        return;
+      }
+      const todayISO = formatDateISO(new Date());
+      const label = formatShortDateNoYear(isoVal);
+      displayEl.innerText = isoVal === todayISO ? `Today (${label})` : label;
+      displayEl.className = 'text-white font-semibold';
+    }
+
+    function toggleIntakeCalendar(e) {
+      if (e) e.stopPropagation();
+      const popover = document.getElementById('intake-calendar-popover');
+      const isHidden = popover.classList.contains('hidden');
+      if (isHidden) {
+        const currentVal = document.getElementById('form-date').value;
+        const baseDate = parseDateISO(currentVal) || new Date();
+        calViewYear = baseDate.getFullYear();
+        calViewMonth = baseDate.getMonth();
+        renderIntakeCalendar();
+        popover.classList.remove('hidden');
+      } else {
+        popover.classList.add('hidden');
+      }
+    }
+
+    function closeIntakeCalendar() {
+      const popover = document.getElementById('intake-calendar-popover');
+      if (popover) popover.classList.add('hidden');
+    }
+
+    function changeCalendarMonth(delta, e) {
+      if (e) e.stopPropagation();
+      calViewMonth += delta;
+      if (calViewMonth < 0) {
+        calViewMonth = 11;
+        calViewYear -= 1;
+      } else if (calViewMonth > 11) {
+        calViewMonth = 0;
+        calViewYear += 1;
+      }
+      renderIntakeCalendar();
+    }
+
+    function selectCalendarDay(isoStr, e) {
+      if (e) e.stopPropagation();
+      document.getElementById('form-date').value = isoStr;
+      updateIntakeDateDisplay();
+      renderIntakeCalendar();
+      closeIntakeCalendar();
+    }
+
+    function clearIntakeDate(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('form-date').value = '';
+      updateIntakeDateDisplay();
+      renderIntakeCalendar();
+      closeIntakeCalendar();
+    }
+
+    function renderIntakeCalendar() {
+      const monthDate = new Date(calViewYear, calViewMonth, 1);
+      const monthName = monthDate.toLocaleDateString('en-US', { month: 'long' });
+      document.getElementById('cal-month-label').innerText = monthName;
+
+      const firstDayIndex = monthDate.getDay();
+      const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+      const todayISO = formatDateISO(new Date());
+      const selectedISO = document.getElementById('form-date').value;
+
+      const daysGrid = document.getElementById('cal-days-grid');
+      let html = '';
+
+      for (let i = 0; i < firstDayIndex; i++) {
+        html += `<div></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const cellDate = new Date(calViewYear, calViewMonth, day);
+        const cellISO = formatDateISO(cellDate);
+        const isSelected = cellISO === selectedISO;
+        const isToday = cellISO === todayISO;
+
+        let btnClasses = 'w-7 h-7 rounded-lg font-bold flex items-center justify-center transition mx-auto ';
+        if (isSelected) {
+          btnClasses += 'bg-white text-black font-black shadow';
+        } else if (isToday) {
+          btnClasses += 'border border-white/70 text-white hover:bg-zinc-800';
+        } else {
+          btnClasses += 'text-zinc-300 hover:bg-zinc-800';
+        }
+
+        html += `
+          <button type="button" onclick="selectCalendarDay('${cellISO}', event)" class="${btnClasses}">
+            ${day}
+          </button>
+        `;
+      }
+
+      daysGrid.innerHTML = html;
+    }
+
+    // =================================================================
+    // NAVIGATION & VIEW SWITCHING
+    // =================================================================
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-content-board').classList.toggle('hidden', tab !== 'board');
+      document.getElementById('tab-content-driver').classList.toggle('hidden', tab !== 'driver');
+      document.getElementById('tab-content-invoices').classList.toggle('hidden', tab !== 'invoices');
+
+      const btnBoard = document.getElementById('nav-board');
+      const btnDriver = document.getElementById('nav-driver');
+      const btnInvoices = document.getElementById('nav-invoices');
+
+      const activeClass = "flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition text-black bg-white shadow";
+      const inactiveClass = "flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition text-zinc-400 hover:text-white";
+
+      btnBoard.className = tab === 'board' ? activeClass : inactiveClass;
+      btnDriver.className = tab === 'driver' ? activeClass : inactiveClass;
+      btnInvoices.className = tab === 'invoices' ? activeClass : inactiveClass;
+
+      renderApp();
+    }
+
+    function setBoardViewMode(mode) {
+      boardViewMode = mode;
+      document.getElementById('container-grid-view').classList.toggle('hidden', mode !== 'grid');
+      document.getElementById('container-list-view').classList.toggle('hidden', mode !== 'list');
+
+      const btnGrid = document.getElementById('btn-view-grid');
+      const btnList = document.getElementById('btn-view-list');
+
+      btnGrid.className = mode === 'grid' ? "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition text-black bg-white" : "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition text-zinc-400 hover:text-white";
+      btnList.className = mode === 'list' ? "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition text-black bg-white" : "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition text-zinc-400 hover:text-white";
+    }
+
+    function switchActiveDriver(driverName) {
+      activeDriver = driverName;
+      renderDriverView();
+    }
+
+    function setDriverSubTab(subTab) {
+      driverSubTab = subTab;
+      const btnAssigned = document.getElementById('btn-driver-assigned');
+      const btnOpen = document.getElementById('btn-driver-open');
+
+      btnAssigned.className = subTab === 'assigned' ? "flex-1 py-2 text-xs font-bold rounded-lg transition text-black bg-white" : "flex-1 py-2 text-xs font-bold rounded-lg transition text-zinc-400 hover:text-white";
+      btnOpen.className = subTab === 'open' ? "flex-1 py-2 text-xs font-bold rounded-lg transition text-black bg-white" : "flex-1 py-2 text-xs font-bold rounded-lg transition text-zinc-400 hover:text-white";
+
+      renderDriverView();
+    }
+
+    // SCHEDULE DAY NAVIGATION
+    function changeScheduleDay(delta) {
+      selectedScheduleDate.setDate(selectedScheduleDate.getDate() + delta);
+      renderScheduleGrid();
+    }
+
+    function resetToToday() {
+      selectedScheduleDate = new Date();
+      renderScheduleGrid();
+    }
+
+    // =================================================================
+    // INTAKE FORM SUBMISSION & QUICK SLOT PRE-FILL
+    // =================================================================
+    function handleAddJob(e) {
+      e.preventDefault();
+      const company = document.getElementById('form-company').value;
+      if (!company) {
+        showToast('Please select a Company / Customer Name.', 'error');
+        return;
+      }
+
+      const po = document.getElementById('form-po').value.trim();
+      const city = document.getElementById('form-city').value;
+      const address = document.getElementById('form-address').value.trim();
+      const date = document.getElementById('form-date').value;
+      const timeslot = document.getElementById('form-timeslot').value;
+      const driver = document.getElementById('form-driver').value;
+
+      const maxNum = jobs.reduce((max, j) => {
+        const num = parseInt((j.id || '').replace('BD-', ''), 10);
+        return !isNaN(num) && num > max ? num : max;
+      }, 1000);
+
+      const newJob = {
+        id: `BD-${maxNum + 1}`,
+        company,
+        po,
+        city,
+        address,
+        date,
+        timeslot,
+        driver,
+        status: 'Open',
+        completedAt: null,
+        invoiceNum: null
+      };
+
+      jobs.unshift(newJob);
+      saveState();
+
+      if (date) {
+        const parsed = parseDateISO(date);
+        if (parsed) selectedScheduleDate = parsed;
+      }
+
+      // Reset form fields cleanly & re-select today's date
+      document.getElementById('form-company').value = '';
+      document.getElementById('form-po').value = '';
+      document.getElementById('form-city').value = '';
+      document.getElementById('form-address').value = '';
+      document.getElementById('form-timeslot').value = '';
+      document.getElementById('form-driver').value = '';
+      initIntakeDatePicker();
+
+      renderApp();
+      showToast(`Added ${company} (${newJob.id})`);
+    }
+
+    function quickBookSlot(dateStr, timeslot, colName) {
+      document.getElementById('form-date').value = dateStr;
+      updateIntakeDateDisplay();
+      document.getElementById('form-timeslot').value = timeslot;
+      document.getElementById('form-driver').value = colName || '';
+
+      document.getElementById('intake-form').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('form-company').focus();
+    }
+
+    // =================================================================
+    // RENDER MAIN VIEWS
+    // =================================================================
+    function renderApp() {
+      renderUnscheduledBar();
+      renderScheduleGrid();
+      renderBoardListView();
+      renderDriverView();
+      renderInvoicesView();
+    }
+
+    function renderUnscheduledBar() {
+      const bar = document.getElementById('unscheduled-jobs-bar');
+      const list = document.getElementById('unscheduled-jobs-list');
+      const unscheduled = jobs.filter(j => !j.date || !j.timeslot);
+
+      if (unscheduled.length === 0) {
+        bar.classList.add('hidden');
+        return;
+      }
+
+      bar.classList.remove('hidden');
+      document.getElementById('unscheduled-count').innerText = unscheduled.length;
+      list.innerHTML = '';
+
+      unscheduled.forEach(job => {
+        const fullAddress = formatJobAddress(job) || 'Address TBD';
+        const dateText = job.date ? formatShortDateNoYear(job.date) : 'Date TBD';
+        const slotText = job.timeslot ? (TIME_SLOTS.find(s => s.id === job.timeslot)?.label || job.timeslot) : 'Time TBD';
+
+        const card = document.createElement('div');
+        card.onclick = () => openManageModal(job.id);
+        card.className = "cursor-pointer bg-zinc-800/90 border border-white/40 rounded-xl p-2.5 hover:scale-[1.01] transition space-y-1";
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-white">${job.driver || 'Overflow'}</span>
+            <span class="font-mono text-zinc-200 font-bold">${dateText} • ${slotText}</span>
+          </div>
+          <div class="font-extrabold text-white text-xs truncate">${job.company}</div>
+          <div class="flex items-center justify-between text-[10px] text-zinc-300">
+            <span class="truncate max-w-[140px]">${fullAddress}</span>
+            <span class="font-mono text-zinc-400">${job.po || 'No PO'}</span>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    // RENDER OPERATOR & OVERFLOW SCHEDULE GRID
+    function renderScheduleGrid() {
+      const dateISO = formatDateISO(selectedScheduleDate);
+      const todayISO = formatDateISO(new Date());
+      const isToday = dateISO === todayISO;
+
+      const dayTitle = selectedScheduleDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric'
+      });
+      document.getElementById('schedule-day-label').innerHTML = isToday
+        ? `${dayTitle} <span class="ml-1.5 text-[10px] bg-white text-black font-black px-2 py-0.5 rounded-full uppercase">Today</span>`
+        : dayTitle;
+
+      // Render Horizontal Header Row (Time + Brett, CJ, Ryan, Leroy, Nick, Dean, Overflow)
+      const headerRow = document.getElementById('grid-header-row');
+      let headerHTML = `
+        <th class="py-3 px-3 w-24 text-center sticky left-0 z-20 bg-black sticky-col-shadow border-r border-zinc-800">
+          <span class="text-zinc-500 font-extrabold uppercase">Time</span>
+        </th>
+      `;
+
+      SCHEDULE_COLUMNS.forEach(colName => {
+        headerHTML += `
+          <th class="py-2.5 px-2 text-center min-w-[115px] border-r border-zinc-800/80">
+            <div class="flex items-center justify-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-white inline-block"></span>
+              <span class="text-xs font-extrabold text-white">${colName}</span>
+            </div>
+          </th>
+        `;
+      });
+
+      headerRow.innerHTML = headerHTML;
+
+      // Render Vertical Time Slot Rows
+      const bodyRows = document.getElementById('grid-body-rows');
+      bodyRows.innerHTML = '';
+
+      TIME_SLOTS.forEach(slot => {
+        const isHalfHourBlock = slot.id === '07:00' || slot.id === '07:30' || slot.id === '08:00' || slot.id === '08:30';
+        const hourNum = parseInt(slot.id.split(':')[0], 10);
+        // Alternating hourly row shading: 7am normal, 8am darker, 9am normal, 10am darker, etc.
+        const isDarkerHour = hourNum % 2 === 0;
+
+        const tr = document.createElement('tr');
+        tr.className = `${isDarkerHour ? 'bg-black' : 'bg-zinc-900'} hover:bg-zinc-800/40 transition`;
+
+        // Vertical Time Column Cell (all time labels share the exact same text-zinc-400 shade)
+        let rowHTML = `
+          <td class="py-2.5 px-2 text-center font-mono font-bold text-[11px] text-zinc-400 sticky left-0 z-10 ${isDarkerHour ? 'bg-black' : 'bg-zinc-900'} sticky-col-shadow border-r border-zinc-800">
+            <div>${slot.label}</div>
+            ${isHalfHourBlock ? '<div class="text-[9px] font-sans font-semibold text-zinc-500">30 min</div>' : ''}
+          </td>
+        `;
+
+        // Operator Columns for this time slot
+        SCHEDULE_COLUMNS.forEach(colName => {
+          const slotJobs = jobs.filter(j => {
+            if (j.date !== dateISO || j.timeslot !== slot.id) return false;
+            if (colName === 'Overflow') {
+              return j.driver === 'Overflow' || !j.driver || j.driver === '';
+            }
+            return j.driver === colName;
+          });
+
+          rowHTML += `<td class="p-1.5 align-top border-r border-b border-zinc-800/70 min-w-[115px]">`;
+
+          if (slotJobs.length > 0) {
+            slotJobs.forEach(job => {
+              let statusDot = `<span class="w-2 h-2 rounded-full border border-white inline-block" title="Open"></span>`;
+              if (job.status === 'Accepted') statusDot = `<span class="w-2 h-2 rounded-full bg-white inline-block" title="Accepted"></span>`;
+              if (job.status === 'Done') statusDot = `<i class="fa-solid fa-check text-[9px] text-white" title="Done"></i>`;
+
+              const cityOrAddr = formatJobAddress(job);
+
+              rowHTML += `
+                <div onclick="openManageModal('${job.id}')" 
+                  class="cursor-pointer ${CARD_STYLE.bg} ${CARD_STYLE.border} border rounded-xl p-2 mb-1 shadow transition hover:scale-[1.02] active:scale-95 space-y-1">
+                  
+                  <div class="flex items-center justify-between text-[10px]">
+                    <span class="font-bold ${CARD_STYLE.text} truncate max-w-[75px]">${colName}</span>
+                    ${statusDot}
+                  </div>
+
+                  <div class="font-extrabold text-white text-xs leading-tight truncate">${job.company}</div>
+                  
+                  ${cityOrAddr ? `<div class="text-[10px] text-zinc-300 truncate">${cityOrAddr}</div>` : ''}
+
+                  <div class="flex items-center justify-between text-[9px] text-zinc-400 font-mono">
+                    <span>${job.po || 'No PO'}</span>
+                    <span class="text-white font-bold">$495</span>
+                  </div>
+                </div>
+              `;
+            });
+          } else {
+            rowHTML += `
+              <button onclick="quickBookSlot('${dateISO}', '${slot.id}', '${colName}')" 
+                class="w-full h-11 rounded-xl border border-dashed border-zinc-800/90 hover:border-white/50 hover:bg-white/5 text-zinc-700 hover:text-white flex items-center justify-center transition group">
+                <i class="fa-solid fa-plus text-xs group-hover:scale-125 transition-transform"></i>
+              </button>
+            `;
+          }
+
+          rowHTML += `</td>`;
+        });
+
+        tr.innerHTML = rowHTML;
+        bodyRows.appendChild(tr);
+      });
+    }
+
+    // RENDER LIST VIEW
+    function renderBoardListView() {
+      const container = document.getElementById('board-jobs-list');
+      container.innerHTML = '';
+
+      document.getElementById('board-count-badge').innerText = `${jobs.length} Total`;
+
+      if (jobs.length === 0) {
+        container.innerHTML = `<div class="bg-zinc-900 border border-zinc-800 rounded-2xl text-center text-zinc-500 py-8 text-xs">No active jobs on the board yet. Use Quick Phone Intake above to add a dispatch.</div>`;
+        return;
+      }
+
+      jobs.forEach(job => {
+        let statusBadge = `<span class="bg-zinc-800 text-zinc-200 border border-zinc-700 px-2 py-0.5 rounded text-[11px] font-bold">Open</span>`;
+        if (job.status === 'Accepted') statusBadge = `<span class="bg-white/15 text-white border border-white/40 px-2 py-0.5 rounded text-[11px] font-bold">Accepted</span>`;
+        if (job.status === 'Done') statusBadge = `<span class="bg-white text-black px-2 py-0.5 rounded text-[11px] font-extrabold">Done</span>`;
+
+        const slotLabel = job.timeslot ? (TIME_SLOTS.find(s => s.id === job.timeslot)?.label || job.timeslot) : 'Time TBD';
+        const dateLabel = job.date ? formatShortDateNoYear(job.date) : 'Date TBD';
+        const fullAddress = formatJobAddress(job) || 'Site Address TBD';
+
+        const card = document.createElement('div');
+        card.className = "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2.5 shadow-md";
+        card.innerHTML = `
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs font-bold text-zinc-400">${job.id}</span>
+              <span class="text-xs font-bold text-white bg-black px-2 py-0.5 rounded border border-zinc-800">
+                <i class="fa-regular fa-clock mr-1"></i>${dateLabel} @ ${slotLabel}
+              </span>
+              <span class="text-xs font-bold text-zinc-200 bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
+                ${job.driver || 'Overflow'}
+              </span>
+            </div>
+            ${statusBadge}
+          </div>
+
+          <div>
+            <div class="font-extrabold text-white text-base">${job.company}</div>
+            <div class="text-xs text-zinc-400 flex items-center gap-1.5 mt-0.5">
+              <i class="fa-solid fa-location-dot text-white"></i>
+              <span>${fullAddress}</span>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs">
+            <span class="bg-black text-zinc-200 font-mono font-bold px-2 py-1 rounded border border-zinc-800">${job.po || 'No PO'}</span>
+            <button onclick="openManageModal('${job.id}')" class="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-3 py-1 rounded-lg border border-zinc-700">
+              Manage / Edit
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // RENDER DRIVER CAB VIEW
+    function renderDriverView() {
+      const container = document.getElementById('driver-jobs-feed');
+      container.innerHTML = '';
+
+      const assignedJobs = jobs.filter(j => j.driver === activeDriver);
+      const openJobs = jobs.filter(j => !j.driver || j.driver === '' || j.driver === 'Overflow');
+
+      document.getElementById('count-driver-assigned').innerText = assignedJobs.length;
+      document.getElementById('count-driver-open').innerText = openJobs.length;
+
+      const targetList = driverSubTab === 'assigned' ? assignedJobs : openJobs;
+
+      if (targetList.length === 0) {
+        container.innerHTML = `
+          <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center space-y-1">
+            <p class="font-bold text-white text-sm">No ${driverSubTab === 'assigned' ? 'Assigned' : 'Open / Overflow'} Jobs</p>
+            <p class="text-xs text-zinc-400">Operators can claim open dispatches from the Open / Overflow tab.</p>
+          </div>
+        `;
+        return;
+      }
+
+      targetList.forEach(job => {
+        const slotLabel = job.timeslot ? (TIME_SLOTS.find(s => s.id === job.timeslot)?.label || job.timeslot) : 'Time TBD';
+        const dateLabel = job.date ? formatShortDateNoYear(job.date) : 'Date TBD';
+        const fullAddress = formatJobAddress(job);
+
+        let primaryBtnHTML = '';
+        if (!job.driver || job.driver === 'Overflow' || job.status === 'Open') {
+          primaryBtnHTML = `
+            <button onclick="acceptJobDriver('${job.id}')" class="w-full bg-white hover:bg-zinc-200 text-black font-extrabold py-3.5 rounded-xl text-sm shadow-lg transition active:scale-95 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-check-circle text-base"></i>
+              <span>Accept & Lock In Job</span>
+            </button>
+          `;
+        } else if (job.status === 'Accepted') {
+          primaryBtnHTML = `
+            <button onclick="markJobDoneDriver('${job.id}')" class="w-full bg-white hover:bg-zinc-200 text-black font-extrabold py-3.5 rounded-xl text-sm shadow-lg transition active:scale-95 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-flag-checkered text-base"></i>
+              <span>Mark Done ($495 Invoice Created)</span>
+            </button>
+          `;
+        } else if (job.status === 'Done') {
+          primaryBtnHTML = `
+            <div class="w-full bg-black border border-white/40 text-white font-bold py-2.5 rounded-xl text-center text-xs flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-circle-check"></i> Completed & Auto-Invoiced
+            </div>
+          `;
+        }
+
+        const addressBlock = fullAddress
+          ? `<a href="https://maps.google.com/?q=${encodeURIComponent(fullAddress)}" target="_blank" class="text-sm font-bold text-white hover:underline flex items-center gap-1.5">
+               <i class="fa-solid fa-diamond-turn-right text-base"></i>
+               <span>${fullAddress}</span>
+             </a>`
+          : `<span class="text-sm font-semibold text-zinc-500">Site Address TBD</span>`;
+
+        const card = document.createElement('div');
+        card.className = "bg-zinc-900 border-2 " + (job.status === 'Accepted' ? 'border-white' : 'border-zinc-800') + " rounded-2xl p-4 space-y-3 shadow-lg";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-xs font-mono font-bold text-zinc-400">${job.id}</span>
+                <span class="text-xs font-bold text-white bg-black px-2 py-0.5 rounded border border-zinc-800">
+                  ${dateLabel} @ ${slotLabel}
+                </span>
+              </div>
+              <h3 class="font-extrabold text-white text-lg leading-tight">${job.company}</h3>
+            </div>
+            <span class="bg-zinc-800 text-white border border-zinc-700 px-2 py-1 rounded font-mono font-bold text-xs">${job.po || 'No PO'}</span>
+          </div>
+
+          <div class="bg-black p-3 rounded-xl border border-zinc-800 space-y-1">
+            <div class="text-[11px] text-zinc-400">Site Address:</div>
+            ${addressBlock}
+          </div>
+
+          ${primaryBtnHTML}
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // DRIVER WORKFLOW ACTIONS
+    function acceptJobDriver(jobId) {
+      const job = jobs.find(j => j.id === jobId);
+      if (job) {
+        job.driver = activeDriver;
+        job.status = 'Accepted';
+        saveState();
+        renderApp();
+        showToast(`${activeDriver} accepted ${job.company}`);
+      }
+    }
+
+    function markJobDoneDriver(jobId) {
+      const job = jobs.find(j => j.id === jobId);
+      if (job) {
+        job.status = 'Done';
+        job.completedAt = new Date().toISOString();
+        
+        const doneJobs = jobs.filter(j => j.invoiceNum);
+        job.invoiceNum = `BD-INV-${1001 + doneJobs.length}`;
+
+        saveState();
+        renderApp();
+        showToast(`Invoice ${job.invoiceNum} generated`);
+      }
+    }
+
+    // RENDER INVOICES VIEW
+    function renderInvoicesView() {
+      const container = document.getElementById('invoices-list');
+      container.innerHTML = '';
+
+      const doneJobs = jobs.filter(j => j.status === 'Done');
+
+      const count = doneJobs.length;
+      const subtotal = count * FLAT_RATE;
+      const totalBilled = subtotal * (1 + GST_RATE);
+
+      document.getElementById('stat-completed-count').innerText = count;
+      document.getElementById('stat-subtotal-rev').innerText = `$${subtotal.toFixed(2)}`;
+      document.getElementById('stat-total-billed').innerText = `$${totalBilled.toFixed(2)}`;
+
+      if (doneJobs.length === 0) {
+        container.innerHTML = `
+          <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center text-xs text-zinc-500">
+            No completed invoices yet. Mark jobs as "Done" in Driver View to auto-generate invoices.
+          </div>
+        `;
+        return;
+      }
+
+      doneJobs.forEach(job => {
+        const slotLabel = job.timeslot ? (TIME_SLOTS.find(s => s.id === job.timeslot)?.label || job.timeslot) : 'Time TBD';
+        const dateLabel = job.date || 'Date TBD';
+
+        const card = document.createElement('div');
+        card.className = "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between shadow-md";
+        card.innerHTML = `
+          <div class="space-y-0.5">
+            <div class="font-mono font-bold text-zinc-200 text-xs">${job.invoiceNum || 'BD-INV-1001'}</div>
+            <div class="font-extrabold text-white text-sm">${job.company}</div>
+            <div class="text-xs text-zinc-400 font-mono">${job.po || 'No PO'} • ${dateLabel} @ ${slotLabel} • Driver: ${job.driver || 'Dean'}</div>
+          </div>
+          <div class="text-right space-y-1.5">
+            <div class="font-mono font-black text-white text-base">$519.75</div>
+            <button onclick="viewInvoiceModal('${job.id}')" class="bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold border border-zinc-700 transition">
+              View Invoice
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // =================================================================
+    // MANAGE JOB MODAL (DEAN)
+    // =================================================================
+    function openManageModal(jobId) {
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return;
+
+      deleteConfirmPending = false;
+      const delBtn = document.getElementById('btn-delete-job');
+      delBtn.innerText = 'Delete';
+      delBtn.className = 'bg-zinc-950 hover:bg-zinc-800 text-zinc-300 font-bold px-3 py-2.5 rounded-xl text-xs transition border border-zinc-700';
+
+      document.getElementById('edit-job-id').value = job.id;
+      document.getElementById('modal-job-id').innerText = job.id;
+      document.getElementById('edit-company').value = job.company;
+      document.getElementById('edit-po').value = job.po || '';
+      document.getElementById('edit-driver').value = job.driver || '';
+      document.getElementById('edit-city').value = job.city || '';
+      document.getElementById('edit-address').value = job.address || '';
+      document.getElementById('edit-date').value = job.date || '';
+      document.getElementById('edit-timeslot').value = job.timeslot || '';
+      document.getElementById('edit-status').value = job.status;
+
+      document.getElementById('modal-job-manage').classList.remove('hidden');
+    }
+
+    function closeManageModal() {
+      document.getElementById('modal-job-manage').classList.add('hidden');
+    }
+
+    function handleSaveJobEdit(e) {
+      e.preventDefault();
+      const jobId = document.getElementById('edit-job-id').value;
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return;
+
+      job.company = document.getElementById('edit-company').value;
+      job.po = document.getElementById('edit-po').value.trim();
+      job.driver = document.getElementById('edit-driver').value;
+      job.city = document.getElementById('edit-city').value;
+      job.address = document.getElementById('edit-address').value.trim();
+      job.date = document.getElementById('edit-date').value;
+      job.timeslot = document.getElementById('edit-timeslot').value;
+      job.status = document.getElementById('edit-status').value;
+
+      if (job.status === 'Done' && !job.invoiceNum) {
+        job.completedAt = new Date().toISOString();
+        const doneJobs = jobs.filter(j => j.invoiceNum);
+        job.invoiceNum = `BD-INV-${1001 + doneJobs.length}`;
+      }
+
+      if (job.date) {
+        const parsed = parseDateISO(job.date);
+        if (parsed) selectedScheduleDate = parsed;
+      }
+
+      saveState();
+      closeManageModal();
+      renderApp();
+      showToast(`Saved changes to ${job.id}`);
+    }
+
+    // Two-step inline delete (never uses confirm())
+    function handleDeleteJob() {
+      const delBtn = document.getElementById('btn-delete-job');
+      if (!deleteConfirmPending) {
+        deleteConfirmPending = true;
+        delBtn.innerText = 'Confirm Delete?';
+        delBtn.className = 'bg-white hover:bg-zinc-200 text-black font-extrabold px-3 py-2.5 rounded-xl text-xs transition shadow';
+        return;
+      }
+
+      const jobId = document.getElementById('edit-job-id').value;
+      jobs = jobs.filter(j => j.id !== jobId);
+      saveState();
+      closeManageModal();
+      renderApp();
+      showToast(`Deleted job ${jobId}`);
+    }
+
+    // =================================================================
+    // INVOICE MODAL & SAGE CSV EXPORT
+    // =================================================================
+    function viewInvoiceModal(jobId) {
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return;
+
+      const slotLabel = job.timeslot ? (TIME_SLOTS.find(s => s.id === job.timeslot)?.label || job.timeslot) : 'Time TBD';
+      const fullAddress = formatJobAddress(job) || 'Site Address TBD';
+
+      document.getElementById('inv-num').innerText = job.invoiceNum || 'BD-INV-1001';
+      document.getElementById('inv-date').innerText = job.date || formatDateISO(new Date());
+      document.getElementById('inv-customer').innerText = job.company;
+      document.getElementById('inv-po').innerText = job.po || 'No PO';
+      document.getElementById('inv-address').innerText = fullAddress;
+      document.getElementById('inv-driver').innerText = job.driver || 'Dean';
+      document.getElementById('inv-timeslot-desc').innerText = `Scheduled Date & Time Slot: ${job.date || 'Date TBD'} @ ${slotLabel}`;
+
+      document.getElementById('modal-invoice-view').classList.remove('hidden');
+    }
+
+    function closeInvoiceModal() {
+      document.getElementById('modal-invoice-view').classList.add('hidden');
+    }
+
+    function exportSageCSV() {
+      const doneJobs = jobs.filter(j => j.status === 'Done');
+
+      if (doneJobs.length === 0) {
+        showToast('No completed invoices to export yet.', 'error');
+        return;
+      }
+
+      let csv = "data:text/csv;charset=utf-8,InvoiceNumber,InvoiceDate,CustomerName,PONumber,SiteAddress,Driver,TimeSlot,Subtotal,GST,Total\n";
+
+      doneJobs.forEach(j => {
+        const invNum = j.invoiceNum || 'BD-INV-1001';
+        const slotLabel = j.timeslot ? (TIME_SLOTS.find(s => s.id === j.timeslot)?.label || j.timeslot) : 'Unscheduled';
+        const fullAddress = formatJobAddress(j);
+        csv += `${invNum},${j.date || ''},"${j.company}","${j.po || ''}","${fullAddress}","${j.driver || ''}","${slotLabel}",495.00,24.75,519.75\n`;
+      });
+
+      const uri = encodeURI(csv);
+      const link = document.createElement("a");
+      link.href = uri;
+      link.download = `BoDean_Sage_Export_${formatDateISO(new Date())}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Exported Sage CSV');
+    }
+  </script>
+
+</body>
+</html>
